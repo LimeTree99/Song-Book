@@ -148,7 +148,7 @@ class Songlis:
 # tkinter things
 class window(tk.Tk):
     def __init__(self):
-        self.current_song = 2
+        self.current_song = 0
         
         tk.Tk.__init__(self)
         self.configure(bg=bg_colour)
