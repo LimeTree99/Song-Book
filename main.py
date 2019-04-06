@@ -42,6 +42,8 @@ class Song:
         self.title = os.path.split(path)[-1][:-4]
         self.longest_line = self._longest_line()
         self.height = line_lim
+        self.l_height = 0
+        self.r_height = self.height
         self.chord_lines = self._find_chords()
         self.alarm = Alarm()
         self.top_line = 0
@@ -104,6 +106,7 @@ class Song:
 class Songlis:
     def __init__(self):
         self.songs = []
+        self._current_song = 0
 
     def _insert_any(self, item):
         n = 0
@@ -113,7 +116,7 @@ class Songlis:
                 found = True
             else:
                 n += 1
-        print(n, item.title)
+        #print(n, item.title)
         self.songs.insert(n, item)
 
     def insert(self, path):
@@ -128,7 +131,17 @@ class Songlis:
                     files.append(os.path.join(r, file))
 
         for file in files:
-            self.insert(file)        
+            self.insert(file)
+
+    def song(self):
+        return self.songs[self._current_song]
+
+    def change_song(self, song_num):
+        self.songs[self._current_song].l_height = 0
+        self.songs[self._current_song].r_height = self.songs[self._current_song].height
+        
+        self._current_song = song_num
+        return
         
     def __iter__(self):
         for i in self.songs:
@@ -148,13 +161,12 @@ class Songlis:
 # tkinter things
 class window(tk.Tk):
     def __init__(self):
-        self.current_song = 0
+        self.current_song = 2
         
         tk.Tk.__init__(self)
         self.configure(bg=bg_colour)
-
-        
-        
+        self.bind('<space>', self.flip_page)
+        self.bind('<Return>', self.flip_page_back)
 
         # songs
         self.songlist = Songlis()
@@ -163,28 +175,28 @@ class window(tk.Tk):
         # the menus
         self.display_menu()
         
-        
-        self.display_text()
-
-
-
-        #root.after(50, lambda: cc.scroll(root, text))
+        self.display_text(self, self.songlist.song().l_height,
+                          self.songlist.song().r_height)
         
         self.mainloop()
         
 
-    def display_text(self):
-        text_left = tk.Text(self, height=self.songlist[self.current_song].height, bd=10, font=("Courier", text_size),relief=tk.FLAT)
-        text_left.insert(tk.INSERT, self.songlist[self.current_song])
-        self.songlist[self.current_song].colour_chords(text_left)
+    def display_text(self, root, left_h, right_h):
+        text_left = tk.Text(root, height=self.songlist.song().height, bd=10,
+                            font=("Courier", text_size),relief=tk.FLAT)
         
-        text_left.yview()
+        text_left.insert(tk.INSERT, self.songlist.song())
+        self.songlist.song().colour_chords(text_left)
+        
+        text_left.yview(left_h)
 
-        text_right = tk.Text(self, height=self.songlist[self.current_song].height, bd=10, font=("Courier", text_size),relief=tk.FLAT)
-        text_right.insert(tk.INSERT, self.songlist[self.current_song])
-        self.songlist[self.current_song].colour_chords(text_right)
+        text_right = tk.Text(root, height=self.songlist.song().height, bd=10,
+                             font=("Courier", text_size),relief=tk.FLAT)
         
-        text_right.yview(self.songlist[self.current_song].height) 
+        text_right.insert(tk.INSERT, self.songlist.song())
+        self.songlist.song().colour_chords(text_right)
+        
+        text_right.yview(right_h) 
         
         text_left.grid(row=1, column=0, columnspan=2)
         text_right.grid(row=1, column=2, columnspan=5)
@@ -199,14 +211,27 @@ class window(tk.Tk):
             choose_song.add_command(label=song.title, command=partial(self.change_song, i))
         
         
-        
         file_menu.add_cascade(label='Choose Song', menu=choose_song)
         menubar.add_cascade(label="File", menu=file_menu)
         self.config(menu=menubar)
 
     def change_song(self, n):
-        self.current_song = n
-        self.display_text()
+        self.songlist.change_song(n)
+        self.display_text(self, self.songlist.song().l_height,
+                          self.songlist.song().r_height)
+
+    def flip_page(self, events):
+        self.songlist.song().l_height = self.songlist.song().r_height
+        self.songlist.song().r_height += self.songlist.song().height
+        
+        self.display_text(self, self.songlist.song().l_height,
+                          self.songlist.song().r_height)
+    def flip_page_back(self, events):
+        self.songlist.song().r_height = self.songlist.song().l_height
+        self.songlist.song().l_height -= self.songlist.song().height
+        
+        self.display_text(self, self.songlist.song().l_height,
+                          self.songlist.song().r_height)
 
     def change_song_direction(self, up):
         if up:
